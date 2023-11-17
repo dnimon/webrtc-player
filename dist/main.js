@@ -165,11 +165,12 @@ class $4c7e7e20a6e4dde3$export$e35e1b35ea68c1 {
     debug = false;
     waitingForCandidates = false;
     resource = null;
-    constructor(peer, channelUrl, onError, mediaConstraints){
+    constructor(peer, channelUrl, onError, mediaConstraints, authKey){
         this.mediaConstraints = mediaConstraints;
         this.channelUrl = channelUrl;
         if (typeof this.channelUrl === "string") throw new Error(`channelUrl parameter expected to be an URL not a string`);
         this.whepType = $4c7e7e20a6e4dde3$export$2351e2e8d1fcfd84.Client;
+        this.authKey = authKey;
         this.onErrorHandler = onError;
         this.audio = !this.mediaConstraints.videoOnly;
         this.video = !this.mediaConstraints.audioOnly;
@@ -197,8 +198,11 @@ class $4c7e7e20a6e4dde3$export$e35e1b35ea68c1 {
     async disconnect() {
         if (this.resource) {
             this.log(`Disconnecting by removing resource ${this.resource}`);
+            const headers = {};
+            this.authKey && (headers["Authorization"] = this.authKey);
             const response = await fetch(this.resource, {
-                method: "DELETE"
+                method: "DELETE",
+                headers: headers
             });
             if (response.ok) this.log(`Successfully removed resource`);
         }
@@ -272,11 +276,13 @@ class $4c7e7e20a6e4dde3$export$e35e1b35ea68c1 {
     async requestOffer() {
         if (this.whepType === $4c7e7e20a6e4dde3$export$2351e2e8d1fcfd84.Server) {
             this.log(`Requesting offer from: ${this.channelUrl}`);
+            const headers = {
+                "Content-Type": "application/sdp"
+            };
+            this.authKey && (headers["Authorization"] = this.authKey);
             const response = await fetch(this.channelUrl.toString(), {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/sdp"
-                },
+                headers: headers,
                 body: ""
             });
             if (response.ok) {
@@ -299,11 +305,13 @@ class $4c7e7e20a6e4dde3$export$e35e1b35ea68c1 {
         if (this.whepType === $4c7e7e20a6e4dde3$export$2351e2e8d1fcfd84.Server && this.resource) {
             const answer = this.localPeer.localDescription;
             if (answer) {
+                const headers = {
+                    "Content-Type": "application/sdp"
+                };
+                this.authKey && (headers["Authorization"] = this.authKey);
                 const response = await fetch(this.resource, {
                     method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/sdp"
-                    },
+                    headers: headers,
                     body: answer.sdp
                 });
                 if (!response.ok) this.error(`sendAnswer response: ${response.status}`);
@@ -318,11 +326,13 @@ class $4c7e7e20a6e4dde3$export$e35e1b35ea68c1 {
         const offer = this.localPeer.localDescription;
         if (this.whepType === $4c7e7e20a6e4dde3$export$2351e2e8d1fcfd84.Client && offer) {
             this.log(`Sending offer to ${this.channelUrl}`);
+            const headers = {
+                "Content-Type": "application/sdp"
+            };
+            this.authKey && (headers["Authorization"] = this.authKey);
             const response = await fetch(this.channelUrl.toString(), {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/sdp"
-                },
+                headers: headers,
                 body: offer.sdp
             });
             if (response.ok) {
@@ -362,22 +372,22 @@ class $4c7e7e20a6e4dde3$export$e35e1b35ea68c1 {
 }
 
 
-const $4366558ee7129abf$var$WHPPAdapterFactory = (peer, channelUrl, onError, mediaConstraints)=>{
+const $4366558ee7129abf$var$WHPPAdapterFactory = (peer, channelUrl, onError, mediaConstraints, authKey)=>{
     return new (0, $d580fda374b2d4e1$export$1bee3ffe1758e87d)(peer, channelUrl, onError);
 };
-const $4366558ee7129abf$var$EyevinnAdapterFactory = (peer, channelUrl, onError, mediaConstraints)=>{
+const $4366558ee7129abf$var$EyevinnAdapterFactory = (peer, channelUrl, onError, mediaConstraints, authKey)=>{
     return new (0, $9c9759905f118312$export$5463baa67f138efa)(peer, channelUrl, onError);
 };
-const $4366558ee7129abf$var$WHEPAdapterFactory = (peer, channelUrl, onError, mediaConstraints)=>{
-    return new (0, $4c7e7e20a6e4dde3$export$e35e1b35ea68c1)(peer, channelUrl, onError, mediaConstraints);
+const $4366558ee7129abf$var$WHEPAdapterFactory = (peer, channelUrl, onError, mediaConstraints, authKey)=>{
+    return new (0, $4c7e7e20a6e4dde3$export$e35e1b35ea68c1)(peer, channelUrl, onError, mediaConstraints, authKey);
 };
 const $4366558ee7129abf$var$adapters = {
     "se.eyevinn.whpp": $4366558ee7129abf$var$WHPPAdapterFactory,
     "se.eyevinn.webrtc": $4366558ee7129abf$var$EyevinnAdapterFactory,
     whep: $4366558ee7129abf$var$WHEPAdapterFactory
 };
-function $4366558ee7129abf$export$4f24674036ad9ae3(type, peer, channelUrl, onError, mediaConstraints) {
-    return $4366558ee7129abf$var$adapters[type](peer, channelUrl, onError, mediaConstraints);
+function $4366558ee7129abf$export$4f24674036ad9ae3(type, peer, channelUrl, onError, mediaConstraints, authKey) {
+    return $4366558ee7129abf$var$adapters[type](peer, channelUrl, onError, mediaConstraints, authKey);
 }
 function $4366558ee7129abf$export$62ed887aeb7fab64() {
     return Object.keys($4366558ee7129abf$var$adapters);
@@ -404,6 +414,7 @@ class $8c8737df5845fd96$export$f6039712bf1ca949 extends (0, $a1w4g$events.EventE
     peer = {};
     adapterFactory = undefined;
     channelUrl = {};
+    authKey = undefined;
     reconnectAttemptsLeft = $8c8737df5845fd96$var$RECONNECT_ATTEMPTS;
     adapter = {};
     statsTypeFilter = undefined;
@@ -442,8 +453,9 @@ class $8c8737df5845fd96$export$f6039712bf1ca949 extends (0, $a1w4g$events.EventE
             });
         }
     }
-    async load(channelUrl) {
+    async load(channelUrl, authKey) {
         this.channelUrl = channelUrl;
+        this.authKey = authKey;
         this.connect();
     }
     // eslint-disable-next-line  @typescript-eslint/no-explicit-any
@@ -537,8 +549,8 @@ class $8c8737df5845fd96$export$f6039712bf1ca949 extends (0, $a1w4g$events.EventE
     }
     async connect() {
         this.setupPeer();
-        if (this.adapterType !== "custom") this.adapter = (0, $4366558ee7129abf$export$4f24674036ad9ae3)(this.adapterType, this.peer, this.channelUrl, this.onErrorHandler.bind(this), this.mediaConstraints);
-        else if (this.adapterFactory) this.adapter = this.adapterFactory(this.peer, this.channelUrl, this.onErrorHandler.bind(this), this.mediaConstraints);
+        if (this.adapterType !== "custom") this.adapter = (0, $4366558ee7129abf$export$4f24674036ad9ae3)(this.adapterType, this.peer, this.channelUrl, this.onErrorHandler.bind(this), this.mediaConstraints, this.authKey);
+        else if (this.adapterFactory) this.adapter = this.adapterFactory(this.peer, this.channelUrl, this.onErrorHandler.bind(this), this.mediaConstraints, this.authKey);
         if (!this.adapter) throw new Error(`Failed to create adapter (${this.adapterType})`);
         if (this.debug) this.adapter.enableDebug();
         this.statsInterval = setInterval(this.onConnectionStats.bind(this), this.msStatsInterval);
